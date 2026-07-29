@@ -1,0 +1,4 @@
+# Shell scripts must keep LF endings. With CRLF, Linux cannot find the
+# interpreter named on the shebang line and reports the script itself as
+# missing, which gives no clue about the real cause.
+*.sh text eol=lf

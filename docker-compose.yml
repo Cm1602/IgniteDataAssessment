@@ -1,0 +1,47 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: medication
+      POSTGRES_PASSWORD: medication
+      POSTGRES_DB: medication_requests
+    ports:
+      # Published so the test suite can be pointed at this database from the host.
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medication -d medication_requests"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://medication:medication@db:5432/medication_requests
+      LOG_LEVEL: INFO
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        # Waits for pg_isready rather than just for the container to exist, so
+        # the migrations in the entrypoint do not race the database start up.
+        condition: service_healthy
+    healthcheck:
+      # urllib rather than curl, which is not in the slim base image. Not worth
+      # installing a package to answer one question.
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import sys,urllib.request; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health', timeout=3).status == 200 else 1)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+volumes:
+  postgres-data:
