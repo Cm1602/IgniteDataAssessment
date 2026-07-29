@@ -22,7 +22,11 @@ from app.models import (  # noqa: F401  imported so the tables register on Base.
 
 config = context.config
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # disable_existing_loggers defaults to True, which switches off every logger
+    # that already exists and is not named in alembic.ini. Running migrations in
+    # the same process as the app would then silently stop the app logging
+    # anything.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # Percent signs are special in ini files, so escape any that appear in a
 # password before handing the URL over.
