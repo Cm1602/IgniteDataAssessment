@@ -25,9 +25,12 @@ current_request_id: ContextVar[str | None] = ContextVar("current_request_id", de
 
 # Everything the standard library already puts on a LogRecord. Anything else was
 # added by us or by a caller using extra=, so it is worth putting in the output.
+#
+# color_message is uvicorn's copy of the message with ANSI escape codes in it.
+# Useful on a terminal, noise in a log aggregator.
 _STANDARD_RECORD_FIELDS = frozenset(
     logging.LogRecord("", 0, "", 0, "", None, None).__dict__.keys()
-) | {"message", "asctime", "taskName"}
+) | {"message", "asctime", "taskName", "color_message"}
 
 _record_factory_installed = False
 

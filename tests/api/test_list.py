@@ -162,6 +162,12 @@ class TestPrescribedDateFilter:
 
         assert body == []
 
+    def test_an_unknown_query_parameter_is_rejected(self, client: TestClient) -> None:
+        """Same strictness as the request bodies: a typo should not be ignored."""
+        response = client.get(f"/patients/{PATIENT}/medication-requests", params={"sort": "date"})
+
+        assert response.status_code == 422
+
     def test_a_backwards_range_is_422(self, client: TestClient) -> None:
         response = client.get(
             f"/patients/{PATIENT}/medication-requests",
