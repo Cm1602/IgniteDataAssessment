@@ -6,7 +6,7 @@ failing loudly beats accepting a request and quietly doing something else.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import Annotated
 from uuid import UUID
 
@@ -102,3 +102,53 @@ class MedicationRequestQuery(BaseModel):
         ):
             raise ValueError("prescribed_date_from cannot be after prescribed_date_to.")
         return self
+
+
+class ClinicianSummary(BaseModel):
+    """Enough of the clinician to show who prescribed something."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    first_name: str
+    last_name: str
+    registration_id: str
+
+
+class MedicationSummary(BaseModel):
+    """Enough of the medication to show what was prescribed."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    code: str
+    code_name: str
+    code_system: str
+
+
+class MedicationRequestRead(BaseModel):
+    """What the API sends back.
+
+    The brief asks for the medication code name and the clinician's name in
+    each response. They are nested rather than flattened into
+    ``medication_code_name`` style fields, which keeps the shape tidy and leaves
+    room to add to either without a wall of prefixes.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    patient_id: UUID
+    clinician_id: UUID
+    medication_id: UUID
+    reason_text: str | None
+    prescribed_date: date
+    start_date: date
+    end_date: date | None
+    frequency: str | None
+    status: MedicationRequestStatus
+    created_at: datetime
+    updated_at: datetime
+
+    clinician: ClinicianSummary
+    medication: MedicationSummary
