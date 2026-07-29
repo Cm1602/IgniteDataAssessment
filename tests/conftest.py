@@ -15,8 +15,9 @@ from __future__ import annotations
 import os
 import shutil
 import tempfile
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -27,12 +28,24 @@ os.environ.setdefault("DATABASE_URL", f"sqlite+pysqlite:///{(_TEMP_DIR / 'test.d
 
 from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
 from sqlalchemy.engine import Engine  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
 
 from app.db.session import engine as app_engine  # noqa: E402
+from app.db.session import get_session  # noqa: E402
+from app.main import create_app  # noqa: E402
+from app.seed import load_reference_data  # noqa: E402
+from app.seed_data import CLINICIANS, MEDICATIONS, PATIENTS  # noqa: E402
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+# Handy names for seeded rows, so tests read as sentences rather than UUIDs.
+PATIENT = str(PATIENTS[0]["id"])
+OTHER_PATIENT = str(PATIENTS[1]["id"])
+CLINICIAN = str(CLINICIANS[0]["id"])
+MEDICATION = str(MEDICATIONS[0]["id"])
+OTHER_MEDICATION = str(MEDICATIONS[1]["id"])
 
 
 @pytest.fixture(scope="session")
@@ -73,3 +86,40 @@ def db_session(migrated_database: Engine) -> Iterator[Session]:
         session.close()
         transaction.rollback()
         connection.close()
+
+
+@pytest.fixture
+def client(db_session: Session) -> Iterator[TestClient]:
+    """An API client wired to the test's session, with reference data loaded.
+
+    Overriding get_session is what keeps the request handlers inside the
+    transaction this test will roll back.
+    """
+    load_reference_data(db_session)
+    db_session.flush()
+
+    app = create_app()
+    app.dependency_overrides[get_session] = lambda: db_session
+    with TestClient(app) as test_client:
+        yield test_client
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def new_request() -> Callable[..., dict[str, Any]]:
+    """Build a valid POST body, overriding whichever fields a test cares about."""
+
+    def build(**overrides: Any) -> dict[str, Any]:
+        body: dict[str, Any] = {
+            "clinician_id": CLINICIAN,
+            "medication_id": MEDICATION,
+            "reason_text": "Schistosomiasis treatment",
+            "prescribed_date": "2026-01-05",
+            "start_date": "2026-01-06",
+            "end_date": "2026-01-20",
+            "frequency": "3 times/day",
+        }
+        body.update(overrides)
+        return body
+
+    return build
