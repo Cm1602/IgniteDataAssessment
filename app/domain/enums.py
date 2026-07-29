@@ -5,6 +5,22 @@ from __future__ import annotations
 from enum import Enum
 
 
+class Sex(str, Enum):
+    """Patient sex."""
+
+    MALE = "male"
+    FEMALE = "female"
+
+
+class MedicationForm(str, Enum):
+    """The physical form a medication comes in."""
+
+    POWDER = "powder"
+    TABLET = "tablet"
+    CAPSULE = "capsule"
+    SYRUP = "syrup"
+
+
 class MedicationRequestStatus(str, Enum):
     """Where a medication request is in its lifecycle."""
 
